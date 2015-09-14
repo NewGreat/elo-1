@@ -2,6 +2,7 @@ import unittest
 import pandas as pd
 import numpy as np
 import numpy.testing as npt
+import collections
 from nose.tools import *
 
 from elo import Elo
@@ -111,6 +112,23 @@ class EloTest(unittest.TestCase):
         assert_raises(KeyError, self._elo.predict, ('NotATeam', 'TeamB'))
         assert_raises(KeyError, self._elo.predict, ('TeamA', 'NotATeam'))
         assert_raises(KeyError, self._elo.predict, ('NotATeam', 'NotATeam'))
+
+    def test_predict_vectorised(self):
+        test_data = [('TeamA', 'TeamB'), ('TeamC', 'TeamD')]
+        predictions = self._elo.predict(test_data)
+
+        assert_true(isinstance(predictions, pd.DataFrame))
+        assert_equal(predictions.shape, (2, 7))
+
+        team_a_likelihood = predictions.ix[:, 2][0]
+        team_b_likelihood = predictions.ix[:, 5][0]
+        assert_almost_equal(team_a_likelihood+team_b_likelihood, 1, places=2,
+                     msg='Total probability should sum to 1.')
+
+        team_c_likelihood = predictions.ix[:, 2][1]
+        team_d_likelihood = predictions.ix[:, 5][1]
+        assert_almost_equal(team_c_likelihood+team_d_likelihood, 1, places=2,
+                     msg='Total probability should sum to 1.')
 
     def test_train_unequal(self):
         game = ('TeamA', 23, 'TeamB', 14)

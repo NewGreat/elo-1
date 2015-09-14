@@ -52,7 +52,16 @@ class Elo(object):
         rating = rating + self._k * mov_multiplier * (score - likelihood)
         return int(rating)
 
-    def predict(self, game):
+    def predict(self, games):
+        if any([not isinstance(el, tuple) for el in games]):
+            games = [games]
+
+        predictions = [self._predict_single_game(game) for game in games]
+        df = pd.concat(predictions, axis=1).T
+        df.columns = ['Team A', 'Elo Score', 'Win %', 'Team B', 'Elo Score', 'Win %', 'Predicted Winner']
+        return df
+
+    def _predict_single_game(self, game):
         home_team, away_team = game
 
         if home_team not in self.ratings:
@@ -69,8 +78,7 @@ class Elo(object):
                                                     bias=-self._home_advantage)
 
         winner = home_team if likelihood_home > likelihood_away else away_team
-        return pd.DataFrame([[home_team, home_rating, likelihood_home, away_team, away_rating, likelihood_away, winner]],
-                            columns=['Team A', 'Elo Score', 'Win %', 'Team B', 'Elo Score', 'Win %', 'Predicted Winner'])
+        return pd.Series([home_team, home_rating, likelihood_home, away_team, away_rating, likelihood_away, winner])
 
     def train(self, game):
         home_team, home_pts, away_team, away_pts = game
